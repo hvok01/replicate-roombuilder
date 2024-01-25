@@ -1,95 +1,69 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+/* eslint-disable @next/next/no-img-element */
+'use client';
+
+import { createPrediction, getPrediction } from "@/actions";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useFormState, useFormStatus } from "react-dom";
+import { Prediction } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const sleep = (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function FormContent() {
+  const { pending } = useFormStatus();
+
+  return (
+    <>
+      {
+        pending && <Skeleton className="h-[480px] w-[512px]" />
+      }
+      <Input 
+        type="file" 
+        name="image"
+        placeholder="https://replicate.delivery/pbxt/kfbWmK9LnJRiOqqfOmnYrrbQ4X37kysVlAMllEKManE92aegA/output_1.png"
+        defaultValue="https://replicate.delivery/pbxt/kfbWmK9LnJRiOqqfOmnYrrbQ4X37kysVlAMllEKManE92aegA/output_1.png"
+        accept="img/*"
+      />
+      <Textarea name="prompt" placeholder="An industrial bedroom"/>
+      <button disabled={pending}>
+        Crear
+      </button>
+    </>
+  )
+}
 
 export default function Home() {
+  const [state, fromAction] = useFormState(handleSubmit, null);
+
+  async function handleSubmit(_state: null | Prediction, formData: FormData) {
+    let prediction = await createPrediction(formData);
+
+    while (['starting','processing'].includes(prediction.status)) {
+
+      prediction = await getPrediction(prediction.id);
+
+      await sleep(4000);
+    }
+
+    return prediction;
+  }
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <main className="grid gap04 max-w-[512px] gap-4">
+      <div>
+        <span>Subi una foto de un interior y un prompt para generar una variante de tu imagen</span>
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+      {
+        state?.output && (
+          <img src={state.output[1]} alt="previsualizacion del render" />
+        )
+      }
+      <form action={fromAction} className="grid gap-4">
+        <FormContent />
+      </form>
     </main>
   );
 }
